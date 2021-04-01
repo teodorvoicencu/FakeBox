@@ -31,10 +31,14 @@ async def vip_joins(websocket):
         vip_player = Player(nickname, is_vip=True)
         get_game().set_vip(vip_player)
 
-        await websocket.send(json.dumps({
-            "type": MessageTypes.SUCCESSFUL_VIP_LOGIN.value,
-            "id": str(vip_player.uuid),
-        }))
+        await websocket.send(
+            json.dumps(
+                {
+                    "type": MessageTypes.SUCCESSFUL_VIP_LOGIN.value,
+                    "id": str(vip_player.uuid),
+                }
+            )
+        )
     else:
         await handle_regular_player(websocket, nickname)
 
@@ -58,10 +62,14 @@ async def handle_regular_player(websocket, nickname):
     player = Player(nickname)
     get_game().add_player(player)
 
-    await websocket.send(json.dumps({
-        "type": MessageTypes.SUCCESSFUL_LOGIN.value,
-        "id": str(player.uuid),
-    }))
+    await websocket.send(
+        json.dumps(
+            {
+                "type": MessageTypes.SUCCESSFUL_LOGIN.value,
+                "id": str(player.uuid),
+            }
+        )
+    )
 
 
 async def main(websocket, path):
