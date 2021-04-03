@@ -1,8 +1,13 @@
 import * as React from 'react';
-import styles from '@branding/app.module.scss';
 
+import { Wallpaper, Games } from './homePage';
 const App: React.FC = () => {
-  return <div>app</div>;
+  return (
+    <>
+      <Wallpaper />
+      <Games />
+    </>
+  );
 };
 
 export default App;
