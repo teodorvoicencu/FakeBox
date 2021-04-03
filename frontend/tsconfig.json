@@ -1,35 +1,32 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "baseUrl": "src",
     "target": "es5",
-    "module": "esnext",
-    "allowJs": true,
-    "checkJs": true,
-    "jsx": "react-jsx",
-    "noImplicitAny": false,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "moduleResolution": "node",
     "lib": [
       "dom",
       "dom.iterable",
       "esnext"
     ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@branding/*": [
+        "./src/branding/*"
+      ]
+    }
   },
   "include": [
-    "./svg.d.ts",
-    "**/src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "babel.config.js",
-    "jest.config.js"
+    "src"
   ]
 }
