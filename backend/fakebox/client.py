@@ -3,42 +3,49 @@ import json
 import asyncio
 import websockets
 
-from common.message_types import MessageTypes
-
 STATE = {}
 
 
-def set_id(uuid: str):
-    STATE["player_uuid"] = uuid
+def set_id(uuid: int):
+    STATE["player_id"] = uuid
 
 
 def get_id() -> str:
-    return STATE.get("player_uuid", None)
+    return STATE.get("player_id", None)
+
+
+def login_request(name):
+    return json.dumps({
+        "action": "login", "nickname": name,
+    })
 
 
 async def hello():
     uri = "ws://localhost:8765"
     async with websockets.connect(uri) as websocket:
         name = input("Set a nickname: ")
+        await websocket.send(login_request(name))
 
-        await websocket.send(name)
+        message = await websocket.recv()
+        data = json.loads(message)
 
-        server_response = await websocket.recv()
-        parsed_response = json.loads(server_response)
+        if data["action"] == "login_response":
+            STATE["player_id"] = int(data["player_id"])
+            STATE["is_vip"] = data["is_vip"]
+            print("This player's UUID is {} and VIP status is {}.".format(
+                STATE["player_id"], STATE["is_vip"]
+            ))
 
-        message_type = MessageTypes(int(parsed_response["type"]))
-        uuid = str(parsed_response["id"])
-
-        set_id(uuid)
-        is_vip = True if message_type == MessageTypes.SUCCESSFUL_VIP_LOGIN else False
-        STATE["is_vip"] = is_vip
-
-        print(f"This player's UUID is {uuid} and VIP status is {is_vip}.")
-
-        while True:
-            command = input(">")
-            if command == "exit":
-                return
+        # while True:
+        #     command = input(">")
+        #     if command == "exit":
+        #         return
+        #
+        #     if command == "start":
+        #         await websocket.send(json.dumps({
+        #             "type": MessageTypes.VIP_PRESSES_START.value,
+        #             "id": uuid,
+        #         }))
 
 
 asyncio.get_event_loop().run_until_complete(hello())

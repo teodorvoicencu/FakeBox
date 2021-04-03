@@ -5,13 +5,15 @@ import asyncio
 import websockets
 
 from common.message_types import MessageTypes
-from models.game import Game
+from models.game import Game, State, GameException
 from models.player import Player
 
 logging.basicConfig(level=logging.INFO)
 
 STATE = {}
+SHARED_STATE = {}
 LOGGER = logging.getLogger('hello')
+USERS = set()
 
 
 def get_game():
@@ -22,64 +24,68 @@ def set_game(game):
     STATE["game"] = game
 
 
-async def vip_joins(websocket):
-    nickname = await websocket.recv()
-
-    LOGGER.info("Initiating game with VIP '%s'.", nickname)
-
-    if not get_game().has_vip:
-        vip_player = Player(nickname, is_vip=True)
-        get_game().set_vip(vip_player)
-
-        await websocket.send(json.dumps({
-            "type": MessageTypes.SUCCESSFUL_VIP_LOGIN.value,
-            "id": str(vip_player.uuid),
-        }))
-    else:
-        await handle_regular_player(websocket, nickname)
-
-
-async def players_join(websocket):
-    game = get_game()
-
-    # Incoming messages can either be players
-    # requesting to join or the VIP player
-    # requesting to start the game.
-    message = await websocket.recv()
-    message = json.loads(message)
-
-    if message.type == MessageTypes.VIP_PRESSED_START:
-        game.start()
-    else:
-        await handle_regular_player(websocket, message.name)
+# def state_event():
+#     return json.dumps({"type": "state", **SHARED_STATE})
+#
+#
+# def users_event():
+#     return json.dumps({"type": "users", "count": len(USERS)})
+#
+#
+# async def notify_state():
+#     if USERS:
+#         message = state_event()
+#         await asyncio.wait([user.send(message) for user in USERS])
+#
+#
+# async def notify_users():
+#     if USERS:
+#         message = users_event()
+#         await asyncio.wait([user.send(message) for user in USERS])
 
 
-async def handle_regular_player(websocket, nickname):
-    player = Player(nickname)
-    get_game().add_player(player)
-
-    await websocket.send(json.dumps({
-        "type": MessageTypes.SUCCESSFUL_LOGIN.value,
-        "id": str(player.uuid),
-    }))
+def login_response_event(player):
+    return json.dumps({
+        "action": "login_response",
+        "player_id": player.player_id,
+        "is_vip": player.is_vip,
+    })
 
 
-async def main(websocket, path):
+async def register(websocket, player_data):
+    try:
+        player = get_game().add_player(
+            player_data["nickname"],
+            websocket,
+            is_vip=(False if get_game().has_vip else True),
+        )
+
+        await websocket.send(login_response_event(player))
+    except GameException:
+        LOGGER.error("Bad message.")
+
+
+async def unregister(websocket):
+    USERS.remove(websocket)
+    # await notify_users()
+
+
+async def game(websocket, path):
     if not get_game():
-        game = Game()
-        set_game(game)
-        LOGGER.info("Game created.")
+        set_game(Game())
+        LOGGER.info("Game code is %s.", get_game().code)
 
-    LOGGER.info("Welcome to room %s.", get_game().code)
+    async for message in websocket:
+        data = json.loads(message)
+        LOGGER.info("Received event. Data: %s.", data)
+        if data["action"] == "login":
+            await register(websocket, data)
+        else:
+            LOGGER.error("Unsupported event: %s.", data["action"])
+    # finally:
+    # await unregister(websocket)
 
-    if not get_game().has_vip:
-        await vip_joins(websocket)
 
-    LOGGER.info("Awaiting for other players to join.")
-
-    await players_join(websocket)
-
-
-start_server = websockets.serve(main, "localhost", 8765)
+start_server = websockets.serve(game, "localhost", 8765)
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
