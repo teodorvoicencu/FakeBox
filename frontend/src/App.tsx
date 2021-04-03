@@ -1,7 +1,7 @@
-import React, { ReactNode } from 'react';
-import styles from '@branding/app.css';
+import * as React from 'react';
+import styles from '@branding/app.module.scss';
 
-const App: ReactNode = () => {
+const App: React.FC = () => {
   return <div>app</div>;
 };
 

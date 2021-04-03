@@ -23,9 +23,10 @@
     "eject": "react-scripts eject",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --quiet",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "typescript": "tsc --noEmit",
     "format": "prettier --write --config ./.prettierrc '**/*(*.js|*.jsx|*.ts|*.tsx)' --loglevel=warn",
     "format:verify": "prettier -l --config ./.prettierrc '**/*(*.js|*.jsx|*.ts|*.tsx)'",
-    "fix": "yarn format && yarn lint:fix"
+    "fix": "yarn format && yarn typescript && yarn lint:fix"
   },
   "eslintConfig": {
     "extends": [
