@@ -19,12 +19,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx",
-    "paths": {
-      "@branding/*": [
-        "./src/branding/*"
-      ]
-    }
+    "jsx": "react-jsx"
   },
   "include": [
     "src"
