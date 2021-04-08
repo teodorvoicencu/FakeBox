@@ -24,19 +24,15 @@ class Game:
         # Game logic before activation: put pieces on a board or smth...
         self.state = State.AWAITING_VIP
 
-    def add_player(self, nickname, websocket, is_vip=False):
-        player = Player(nickname, websocket, is_vip)
+    def add_player(self, nickname, websocket):
+        is_vip = True if self.state == State.AWAITING_VIP else False
+        player = Player(self.player_count, nickname, websocket, is_vip=is_vip)
 
         self.players[self.player_count] = player
-        player.player_id = self.player_count
+        self.player_count += 1
 
         if is_vip:
-            if self.state == State.AWAITING_VIP:
-                self.state = State.AWAITING_PLAYERS
-            else:
-                raise GameException("Game already has a VIP.")
-
-        self.player_count += 1
+            self.state = State.AWAITING_PLAYERS
 
         return player
 

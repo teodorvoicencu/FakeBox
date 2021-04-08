@@ -4,3 +4,6 @@ class Player:
         self.nickname = nickname
         self.is_vip = is_vip
         self.websocket = websocket
+
+    def __repr__(self):
+        return 'Player({}, {})'.format(self.player_id, self.nickname)
