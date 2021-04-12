@@ -1,8 +1,9 @@
-import uuid
-
-
 class Player:
-    def __init__(self, nickname: str, is_vip: bool = False):
-        self.uuid = uuid.uuid4()
+    def __init__(self, player_id: int, nickname: str, websocket, is_vip: bool = False):
+        self.player_id = player_id
         self.nickname = nickname
         self.is_vip = is_vip
+        self.websocket = websocket
+
+    def __repr__(self):
+        return 'Player({}, {})'.format(self.player_id, self.nickname)

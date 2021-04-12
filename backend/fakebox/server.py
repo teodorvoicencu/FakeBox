@@ -4,14 +4,16 @@ import logging
 import asyncio
 import websockets
 
-from common.message_types import MessageTypes
-from models.game import Game
-from models.player import Player
+from common.actions import Actions
+from models.game import Game, State, GameException
+from common.handling_exception import HandlingException
 
 logging.basicConfig(level=logging.INFO)
 
 STATE = {}
+SHARED_STATE = {}
 LOGGER = logging.getLogger('hello')
+USERS = set()
 
 
 def get_game():
@@ -22,72 +24,69 @@ def set_game(game):
     STATE["game"] = game
 
 
-async def vip_joins(websocket):
-    nickname = await websocket.recv()
-
-    LOGGER.info("Initiating game with VIP '%s'.", nickname)
-
-    if not get_game().has_vip:
-        vip_player = Player(nickname, is_vip=True)
-        get_game().set_vip(vip_player)
-
-        await websocket.send(
-            json.dumps(
-                {
-                    "type": MessageTypes.SUCCESSFUL_VIP_LOGIN.value,
-                    "id": str(vip_player.uuid),
-                }
-            )
-        )
-    else:
-        await handle_regular_player(websocket, nickname)
+def reject_event(message):
+    return json.dumps({
+        "action": Actions.PLAYER_REJECTED,
+        "message": message,
+    })
 
 
-async def players_join(websocket):
-    game = get_game()
+async def login_handler(websocket, path, data):
+    if get_game().state not in [State.AWAITING_VIP, State.AWAITING_PLAYERS]:
+        return reject_event("Game is no longer taking in players.")
 
-    # Incoming messages can either be players
-    # requesting to join or the VIP player
-    # requesting to start the game.
-    message = await websocket.recv()
-    message = json.loads(message)
+    code = data.get("code", None)
+    if not get_game().code == code:
+        return reject_event("Incorrect room code.")
 
-    if message.type == MessageTypes.VIP_PRESSED_START:
-        game.start()
-    else:
-        await handle_regular_player(websocket, message.name)
+    nickname = data.get("nickname", None)
+    if not nickname:
+        return reject_event("Empty nickname.")
 
+    player = get_game().add_player(nickname, websocket)
 
-async def handle_regular_player(websocket, nickname):
-    player = Player(nickname)
-    get_game().add_player(player)
+    # Player successfully joined
+    LOGGER.info('New player joined. Players: %s.', [player for player in get_game().players.values()])
 
-    await websocket.send(
-        json.dumps(
-            {
-                "type": MessageTypes.SUCCESSFUL_LOGIN.value,
-                "id": str(player.uuid),
-            }
-        )
-    )
+    return json.dumps({
+        "action": Actions.PLAYER_ACCEPTED,
+        "player_id": player.player_id,
+        "is_vip": player.is_vip,
+    })
 
 
-async def main(websocket, path):
+HANDLERS = {
+    Actions.PLAYER_LOGIN: login_handler,
+}
+
+
+async def game(websocket, path):
     if not get_game():
-        game = Game()
-        set_game(game)
-        LOGGER.info("Game created.")
+        set_game(Game())
+        LOGGER.info("Game code is %s.", get_game().code)
 
-    LOGGER.info("Welcome to room %s.", get_game().code)
+    async for message in websocket:
+        data = json.loads(message)
+        LOGGER.info("Received event. Data: %s.", data)
 
-    if not get_game().has_vip:
-        await vip_joins(websocket)
+        response = None
+        can_handle = False
+        event_action = data.get("action", None)
+        for action, handler in HANDLERS.items():
+            if event_action == action.value:
+                can_handle = True
+                try:
+                    response = await handler(websocket, path, data)
+                except (GameException, HandlingException) as e:
+                    LOGGER.info("Game or handling error: %s", str(e))
 
-    LOGGER.info("Awaiting for other players to join.")
+        if not can_handle:
+            LOGGER.info("Cannot handle action of type '%s'", str(event_action))
 
-    await players_join(websocket)
+        if response:
+            await websocket.send(response)
 
 
-start_server = websockets.serve(main, "localhost", 8765)
+start_server = websockets.serve(game, "localhost", 8765)
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

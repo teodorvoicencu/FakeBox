@@ -1,0 +1,2 @@
+class HandlingException(RuntimeError):
+    pass
