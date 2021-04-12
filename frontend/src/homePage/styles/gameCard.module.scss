@@ -1,0 +1,11 @@
+@import '../../branding/colors.module.scss';
+
+.container {
+    border-radius: 20px;
+    width: 357px;
+    height: 312px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: $primaryColor;
+};
